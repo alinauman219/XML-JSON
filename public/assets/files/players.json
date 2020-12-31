@@ -1,0 +1,21 @@
+[{ 
+    "id": 1,
+    "image": "messi.png",
+    "first_name": "messi",
+    "last_name": "brazie",
+    "position": "midfield",
+    "number": "98",
+    "user_name": "messi"
+},
+{ 
+    "id": 2,
+    "image": "deno.png",
+    "first_name": "Deno",
+    "last_name": "Mchnzie",
+    "position": "Defense",
+    "number": "87",
+    "user_name": "deno"
+}
+]
+
+

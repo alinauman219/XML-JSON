@@ -1,4 +1,10 @@
+'use strict';
 const fs = require('fs');
+const path = require('path');
+const dirPath = path.join(__dirname, '/../public/assets/files/players.json');
+
+let rawdata = fs.readFileSync(dirPath);
+let playersData = JSON.parse(rawdata);
 
 module.exports = {
     addPlayerPage: (req, res) => {
@@ -65,16 +71,22 @@ module.exports = {
     },
     editPlayerPage: (req, res) => {
         let playerId = req.params.id;
-        let query = "SELECT * FROM `players` WHERE id = '" + playerId + "' ";
-        db.query(query, (err, result) => {
-            if (err) {
-                return res.status(500).send(err);
-            }
-            res.render('edit-player.ejs', {
-                title: "Edit  Player"
-                ,player: result[0]
-                ,message: ''
-            });
+
+        var arrFound = Object.keys(playersData).filter(function(key) {
+            return playersData[key].id == playerId;
+            // to cast back from an array of keys to the object, with just the passing ones
+            }).reduce(function(obj, key){
+                obj[key] = playersData[key];
+                return obj;
+            },
+        {});
+
+        ///console.log(arrFound[0]);
+
+        res.render('edit-player.ejs', {
+            title: "Edit  Player",
+            player: arrFound[0],
+            message: ''
         });
     },
     editPlayer: (req, res) => {
@@ -84,13 +96,29 @@ module.exports = {
         let position = req.body.position;
         let number = req.body.number;
 
-        let query = "UPDATE `players` SET `first_name` = '" + first_name + "', `last_name` = '" + last_name + "', `position` = '" + position + "', `number` = '" + number + "' WHERE `players`.`id` = '" + playerId + "'";
-        db.query(query, (err, result) => {
-            if (err) {
-                return res.status(500).send(err);
+        // let query = "UPDATE `players` SET `first_name` = '" + first_name + "', `last_name` = '" + last_name + "', `position` = '" + position + "', `number` = '" + number + "' WHERE `players`.`id` = '" + playerId + "'";
+        // db.query(query, (err, result) => {
+        //     if (err) {
+        //         return res.status(500).send(err);
+        //     }
+        //     res.redirect('/');
+        // });
+
+        fs.readFile(dirPath, 'utf8', 
+            function readFileCallback(err, data)
+            {
+                if (err){
+                    console.log(err);
+                } 
+                else 
+                {
+                    obj = JSON.parse(data); //now it an object
+                    obj.table.push({id: 2, square:3}); //add some data
+                    json = JSON.stringify(obj); //convert it back to json
+                    fs.writeFile('myjsonfile.json', json, 'utf8', callback); // write it back 
+                }
             }
-            res.redirect('/');
-        });
+        );
     },
     deletePlayer: (req, res) => {
         let playerId = req.params.id;

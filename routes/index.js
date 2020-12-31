@@ -1,16 +1,16 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const dirPath = path.join(__dirname, '/../public/assets/files/players.json');
+
+let rawdata = fs.readFileSync(dirPath);
+let result = JSON.parse(rawdata);
+
 module.exports = {
     getHomePage: (req, res) => {
-        let query = "SELECT * FROM `players` ORDER BY id ASC"; // query database to get all the players
-
-        // execute query
-        db.query(query, (err, result) => {
-            if (err) {
-                res.redirect('/');
-            }
-            res.render('index.ejs', {
-                title:" Welcome to Socka | View Players" 
-                ,players: result
-            });
+        res.render('index.ejs', {
+                title:" Welcome to Soccor Players | View Players", 
+                players: result
         });
     },
 };
