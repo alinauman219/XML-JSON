@@ -1,6 +1,8 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto') 
+
 const dirPath = path.join(__dirname, '/../public/assets/files/players.json');
 
 let rawdata = fs.readFileSync(dirPath);
@@ -29,120 +31,145 @@ module.exports = {
         let fileExtension = uploadedFile.mimetype.split('/')[1];
         image_name = username + '.' + fileExtension;
 
-        let usernameQuery = "SELECT * FROM `players` WHERE user_name = '" + username + "'";
+        var pObj = {
+                        "id": crypto.randomBytes(8).toString('hex'),
+                        "image":image_name,
+                        "first_name":first_name,
+                        "last_name": last_name,
+                        "position": position,
+                        "number": number,
+                        "user_name": username
+                    };
 
-        db.query(usernameQuery, (err, result) => {
-            if (err) {
-                return res.status(500).send(err);
-            }
-            if (result.length > 0) {
+
+        for (let key in playersData) {
+            if (playersData[key].username === username) {
                 message = 'Username already exists';
                 res.render('add-player.ejs', {
                     message,
                     title: "Welcome to Socka | Add a new player"
                 });
-            } else {
-                // check the filetype before uploading it
-                if (uploadedFile.mimetype === 'image/png' || uploadedFile.mimetype === 'image/jpeg' || uploadedFile.mimetype === 'image/gif') {
-                    // upload the file to the /public/assets/img directory
-                    uploadedFile.mv(`public/assets/img/${image_name}`, (err ) => {
-                        if (err) {
-                            return res.status(500).send(err);
-                        }
-                        // send the player's details to the database
-                        let query = "INSERT INTO `players` (first_name, last_name, position, number, image, user_name) VALUES ('" +
-                            first_name + "', '" + last_name + "', '" + position + "', '" + number + "', '" + image_name + "', '" + username + "')";
-                        db.query(query, (err, result) => {
-                            if (err) {
-                                return res.status(500).send(err);
-                            }
-                            res.redirect('/');
-                        });
-                    });
-                } else {
-                    message = "Invalid File format. Only 'gif', 'jpeg' and 'png' images are allowed.";
-                    res.render('add-player.ejs', {
-                        message,
-                        title: "Welcome to Socka | Add a new player"
-                    });
-                }
             }
-        });
+        }  
+
+        if (uploadedFile.mimetype === 'image/png' || uploadedFile.mimetype === 'image/jpeg' || uploadedFile.mimetype === 'image/gif') 
+        {
+            // upload the file to the /public/assets/img directory
+            uploadedFile.mv(`public/assets/img/${image_name}`, (err ) => {
+                if (err) {
+                    return res.status(500).send(err);
+                }
+                // send the player's details to the database
+                // let query = "INSERT INTO `players` (first_name, last_name, position, number, image, user_name) VALUES ('" +
+                //     first_name + "', '" + last_name + "', '" + position + "', '" + number + "', '" + image_name + "', '" + username + "')";
+                // db.query(query, (err, result) => {
+                //     if (err) {
+                //         return res.status(500).send(err);
+                //     }
+                //     res.redirect('/');
+                // });
+                
+                playersData.push(pObj);
+
+                var updatedJson = JSON.stringify(playersData);
+                 fs.writeFile(dirPath, updatedJson, (err) => { 
+                    if (err){ 
+                        console.log(err); 
+                        return res.status(500).send(err);
+                    }
+                    else { 
+                        console.log("File written successfully\n"); 
+                        console.log("The written has the following contents:"); 
+                        console.log(fs.readFileSync(dirPath, "utf8")); 
+                    } 
+                }); 
+                res.redirect('/');
+
+
+            });
+        } else {
+            message = "Invalid File format. Only 'gif', 'jpeg' and 'png' images are allowed.";
+            res.render('add-player.ejs', {
+                message,
+                title: "Welcome to Socka | Add a new player"
+            });
+        }
     },
     editPlayerPage: (req, res) => {
-        let playerId = req.params.id;
-
-        var arrFound = Object.keys(playersData).filter(function(key) {
-            return playersData[key].id == playerId;
-            // to cast back from an array of keys to the object, with just the passing ones
-            }).reduce(function(obj, key){
-                obj[key] = playersData[key];
-                return obj;
-            },
-        {});
-
-        ///console.log(arrFound[0]);
-
+        let foundPlayer = null;
+        for (let key in playersData) {
+            if (playersData[key].id == req.params.id) {
+                foundPlayer = playersData[key];
+                break;
+            }
+        }
         res.render('edit-player.ejs', {
             title: "Edit  Player",
-            player: arrFound[0],
+            player: foundPlayer,
             message: ''
         });
     },
     editPlayer: (req, res) => {
+        //console.log(req.params);
+
         let playerId = req.params.id;
+        // console.log(playerId);
         let first_name = req.body.first_name;
         let last_name = req.body.last_name;
         let position = req.body.position;
         let number = req.body.number;
 
-        // let query = "UPDATE `players` SET `first_name` = '" + first_name + "', `last_name` = '" + last_name + "', `position` = '" + position + "', `number` = '" + number + "' WHERE `players`.`id` = '" + playerId + "'";
-        // db.query(query, (err, result) => {
-        //     if (err) {
-        //         return res.status(500).send(err);
-        //     }
-        //     res.redirect('/');
-        // });
+        for (var i=0; i<playersData.length; i++) {
+          
+            console.log(playersData[i].id);
+            if (playersData[i].id == playerId) {
 
-        fs.readFile(dirPath, 'utf8', 
-            function readFileCallback(err, data)
-            {
-                if (err){
-                    console.log(err);
-                } 
-                else 
-                {
-                    obj = JSON.parse(data); //now it an object
-                    obj.table.push({id: 2, square:3}); //add some data
-                    json = JSON.stringify(obj); //convert it back to json
-                    fs.writeFile('myjsonfile.json', json, 'utf8', callback); // write it back 
-                }
-            }
-        );
-    },
-    deletePlayer: (req, res) => {
-        let playerId = req.params.id;
-        let getImageQuery = 'SELECT image from `players` WHERE id = "' + playerId + '"';
-        let deleteUserQuery = 'DELETE FROM players WHERE id = "' + playerId + '"';
-
-        db.query(getImageQuery, (err, result) => {
-            if (err) {
-                return res.status(500).send(err);
-            }
-
-            let image = result[0].image;
-
-            fs.unlink(`public/assets/img/${image}`, (err) => {
-                if (err) {
-                    return res.status(500).send(err);
-                }
-                db.query(deleteUserQuery, (err, result) => {
-                    if (err) {
+                //console.log(playersData[i].id + " is matched with" + playerId);
+                playersData[i].first_name = first_name;                
+                playersData[i].last_name = last_name;                
+                playersData[i].position = position;                
+                playersData[i].number = number;
+                
+                var updatedJson = JSON.stringify(playersData);
+                 fs.writeFile(dirPath, updatedJson, (err) => { 
+                    if (err){ 
+                        console.log(err); 
                         return res.status(500).send(err);
                     }
-                    res.redirect('/');
-                });
-            });
-        });
+                    else { 
+                        console.log("File written successfully\n"); 
+                        console.log("The written has the following contents:"); 
+                        console.log(fs.readFileSync(dirPath, "utf8")); 
+                    } 
+                }); 
+                res.redirect('/');
+            }
+        }
+    },
+
+    deletePlayer: (req, res) => {
+        let playerId = req.params.id;       
+
+        for (let key in playersData) {
+            if (playersData[key].id == playerId) {
+                // delete playersData[key];
+                playersData.splice(key,1);
+
+                var updatedJson = JSON.stringify(playersData);
+                fs.writeFile(dirPath, updatedJson, (err) => { 
+                    if (err){ 
+                        console.log(err); 
+                        return res.status(500).send(err);
+                    }
+                    else { 
+                        console.log("File written successfully\n"); 
+                        console.log("The written has the following contents:"); 
+                        console.log(fs.readFileSync(dirPath, "utf8")); 
+                    } 
+                }); 
+                res.redirect('/');
+                break;
+            }
+        }
     }
 };
