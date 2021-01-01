@@ -2,11 +2,15 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto') 
+const schma = require('jsonschema')
 
-const dirPath = path.join(__dirname, '/../public/assets/files/players.json');
-
-let rawdata = fs.readFileSync(dirPath);
-let playersData = JSON.parse(rawdata);
+var IsSchemaValid = function (pData) {
+    var Validator = schma.Validator;
+    var playerSchema = {"type":"array","items":{"type":"object","required":[],"properties":{"id":{"type":"string"},"image":{"type":"string"},"first_name":{"type":"string"},"last_name":{"type":"string"},"position":{"type":"string"},"number":{"type":"string"},"user_name":{"type":"string"}}}}
+    var v = new Validator();
+    var res = v.validate(pData, playerSchema);
+    return res.valid;
+}
 
 module.exports = {
     addPlayerPage: (req, res) => {
@@ -16,8 +20,16 @@ module.exports = {
         });
     },
     addPlayer: (req, res) => {
+        const dirPath = path.join(__dirname, '/../public/assets/files/players.json');
+        let rawdata = fs.readFileSync(dirPath);
+        let playersData = JSON.parse(rawdata);
+        
         if (!req.files) {
             return res.status(400).send("No files were uploaded.");
+        }
+
+        if(!IsSchemaValid(playersData)){
+            return res.status(400).send("Scheema is not valid");
         }
 
         let message = '';
@@ -43,7 +55,7 @@ module.exports = {
 
 
         for (let key in playersData) {
-            if (playersData[key].username === username) {
+            if (playersData[key].username == username) {
                 message = 'Username already exists';
                 res.render('add-player.ejs', {
                     message,
@@ -59,15 +71,6 @@ module.exports = {
                 if (err) {
                     return res.status(500).send(err);
                 }
-                // send the player's details to the database
-                // let query = "INSERT INTO `players` (first_name, last_name, position, number, image, user_name) VALUES ('" +
-                //     first_name + "', '" + last_name + "', '" + position + "', '" + number + "', '" + image_name + "', '" + username + "')";
-                // db.query(query, (err, result) => {
-                //     if (err) {
-                //         return res.status(500).send(err);
-                //     }
-                //     res.redirect('/');
-                // });
                 
                 playersData.push(pObj);
 
@@ -96,6 +99,10 @@ module.exports = {
         }
     },
     editPlayerPage: (req, res) => {
+        const dirPath = path.join(__dirname, '/../public/assets/files/players.json');
+        let rawdata = fs.readFileSync(dirPath);
+        let playersData = JSON.parse(rawdata);
+
         let foundPlayer = null;
         for (let key in playersData) {
             if (playersData[key].id == req.params.id) {
@@ -111,6 +118,10 @@ module.exports = {
     },
     editPlayer: (req, res) => {
         //console.log(req.params);
+
+        const dirPath = path.join(__dirname, '/../public/assets/files/players.json');
+        let rawdata = fs.readFileSync(dirPath);
+        let playersData = JSON.parse(rawdata);
 
         let playerId = req.params.id;
         // console.log(playerId);
@@ -148,6 +159,9 @@ module.exports = {
     },
 
     deletePlayer: (req, res) => {
+        const dirPath = path.join(__dirname, '/../public/assets/files/players.json');
+        let rawdata = fs.readFileSync(dirPath);
+        let playersData = JSON.parse(rawdata);
         let playerId = req.params.id;       
 
         for (let key in playersData) {
