@@ -2,15 +2,17 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto') 
-const schma = require('jsonschema')
+var playerSchema = {type:"array", uniqueItems: true,items:[{type:"object",properties:{ id: { type: "string"}, image:{type:"string"},first_name:{type:"string"},last_name:{type:"string"},position:{type:"string"},number:{type:"string"},user_name:{type:"string"}}, required:["id","image","firs_name","last_name","position","number","user_name"]}]};
+var playerObjectSchema = {type:"object",properties:{id:{type:"string"},image:{type:"string"},first_name:{type:"string"},last_name:{type:"string"},position:{type:"string"},number:{type:"string"},user_name:{type:"string"}},required:["id","image","firs_name","last_name","position","number","user_name"]};
+const Ajv = require("ajv").default
+const ajv = new Ajv({allErrors: true})
+// require("ajv-errors")(ajv /*, {singleError: true} */)
 
-var IsSchemaValid = function (pData) {
-    var Validator = schma.Validator;
-    var playerSchema = {"type":"array","items":{"type":"object","required":[],"properties":{"id":{"type":"string"},"image":{"type":"string"},"first_name":{"type":"string"},"last_name":{"type":"string"},"position":{"type":"string"},"number":{"type":"string"},"user_name":{"type":"string"}}}}
-    var v = new Validator();
-    var res = v.validate(pData, playerSchema);
-    return res.valid;
-}
+
+// const ajv = new Ajv() // options can be passed, e.g. {allErrors: true}
+// const valid = validate(data)
+// if (!valid) console.log(validate.errors)
+
 
 module.exports = {
     addPlayerPage: (req, res) => {
@@ -28,11 +30,7 @@ module.exports = {
             return res.status(400).send("No files were uploaded.");
         }
 
-        if(!IsSchemaValid(playersData)){
-            return res.status(400).send("Scheema is not valid");
-        }
-
-        let message = '';
+        // let message = '';
         let first_name = req.body.first_name;
         let last_name = req.body.last_name;
         let position = req.body.position;
@@ -41,17 +39,27 @@ module.exports = {
         let uploadedFile = req.files.image;
         let image_name = uploadedFile.name;
         let fileExtension = uploadedFile.mimetype.split('/')[1];
-        image_name = username + '.' + fileExtension;
+        image_name = username + '.' + fileExtension;       
 
         var pObj = {
                         "id": crypto.randomBytes(8).toString('hex'),
                         "image":image_name,
-                        "first_name":first_name,
+                        "firs_name":first_name,
                         "last_name": last_name,
                         "position": position,
                         "number": number,
                         "user_name": username
-                    };
+                    };    
+                    
+        const validate = ajv.compile(playerObjectSchema)
+        const valid = validate(pObj)   
+        
+        if (!valid) { 
+            var txt = ajv.errorsText(validate.errors)
+            //console.log(txt);
+            console.log(validate.errors)
+            return res.status(400).send(txt);
+        }
 
 
         for (let key in playersData) {
@@ -72,7 +80,7 @@ module.exports = {
                     return res.status(500).send(err);
                 }
                 
-                playersData.push(pObj);
+                playersData.push(pObj);                
 
                 var updatedJson = JSON.stringify(playersData);
                  fs.writeFile(dirPath, updatedJson, (err) => { 
